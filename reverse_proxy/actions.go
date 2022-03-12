@@ -3,10 +3,12 @@ package main
 import (
 	"github.com/digitalocean/godo"
 	"strconv"
+	"context"
 	"time"
 )
 
 var failureWait = time.Second * 5
+var ctx = context.TODO()
 
 func (s *Server) Shutdown() {
 	s.ShutdownDeadline = time.Now().Add(time.Minute * 5)
@@ -25,7 +27,7 @@ func (s *Server) ForceShutdown() {
 	s.Log("force shutdown", "WARNING: Force shutting down:", s.DropletId)
 
 	for i := 0; i < 3; i++ {
-		_, _, err := doClient.DropletActions.PowerOff(s.DropletId)
+		_, _, err := doClient.DropletActions.PowerOff(ctx, s.DropletId)
 		if err != nil {
 			s.Log("force shutdown", "Error while force shutting down:", err)
 			continue
@@ -53,7 +55,7 @@ func (s *Server) Destroy() {
 	}
 
 	for i := 0; i < 3; i++ {
-		_, err := doClient.Droplets.Delete(s.DropletId)
+		_, err := doClient.Droplets.Delete(ctx, s.DropletId)
 		if err != nil {
 			s.Log("destroy", "Error while destroying droplet:", err)
 			time.Sleep(failureWait)
@@ -85,7 +87,7 @@ func (s *Server) Snapshot() {
 	// Will be followed by a destruction
 	for i := 0; i < 3; i++ {
 		snapshotTime := time.Now().Unix()
-		_, _, err := doClient.DropletActions.Snapshot(s.DropletId,
+		_, _, err := doClient.DropletActions.Snapshot(ctx, s.DropletId,
 			s.Name+"-"+strconv.FormatInt(snapshotTime, 10))
 		if err != nil {
 			s.Log("snapshot", "Failed to snapshot droplet:", err)
@@ -107,7 +109,7 @@ func (s *Server) Snapshot() {
 
 		mcSnapshots := []snapshotInfo{}
 
-		snapshots, _, err := doClient.Images.ListUser(opt)
+		snapshots, _, err := doClient.Images.ListUser(ctx, opt)
 		if err != nil {
 			s.Log("snapshot", "Failed to list snapshots:", err)
 			time.Sleep(failureWait)
@@ -148,7 +150,7 @@ func (s *Server) Snapshot() {
 			if earliestIndex >= 0 {
 				s.Log("snapshot", "Removing snapshot with time:",
 					earliestSnapshot.time)
-				_, err := doClient.Images.Delete(earliestSnapshot.id)
+				_, err := doClient.Images.Delete(ctx, earliestSnapshot.id)
 				if err != nil {
 					s.Log("snapshot", "Failed to remove snapshot:", err)
 					time.Sleep(failureWait)
@@ -187,7 +189,7 @@ func (s *Server) Restore() {
 	var latestSnapshot snapshotInfo
 
 	for i := 0; i < 5; i++ {
-		snapshots, _, err := doClient.Images.ListUser(opt)
+		snapshots, _, err := doClient.Images.ListUser(ctx, opt)
 		if err != nil {
 			s.Log("restore", "Failed to list snapshots:", err)
 			time.Sleep(failureWait)
@@ -237,7 +239,7 @@ func (s *Server) Restore() {
 		latestSnapshot.time)
 
 	for i := 0; i < 3; i++ {
-		droplets, _, err := doClient.Droplets.List(opt)
+		droplets, _, err := doClient.Droplets.List(ctx, opt)
 		if err != nil {
 			s.Log("restore", "Failed to get droplet list:", err)
 			time.Sleep(failureWait)
@@ -253,7 +255,7 @@ func (s *Server) Restore() {
 			}
 		}
 
-		_, _, err = doClient.Droplets.Create(createRequest)
+		_, _, err = doClient.Droplets.Create(ctx, createRequest)
 		if err != nil {
 			s.Log("restore", "Failed to create droplet:", err)
 			time.Sleep(failureWait)

@@ -135,7 +135,7 @@ func getDropletsList(dropletPrefixes []string) ([]dropletState, error) {
 
 	var droplets []godo.Droplet
 
-	droplets, _, err := doClient.Droplets.List(opt)
+	droplets, _, err := doClient.Droplets.List(ctx, opt)
 	if err != nil {
 		return []dropletState{}, err
 	}
@@ -168,7 +168,7 @@ func getRunningAction(server *Server, dropletStatus string) (int, error) {
 		Page:    1,
 		PerPage: 100,
 	}
-	actions, _, err := doClient.Droplets.Actions(server.DropletId, opt)
+	actions, _, err := doClient.Droplets.Actions(ctx, server.DropletId, opt)
 	if err != nil {
 		return 0, err
 	}
